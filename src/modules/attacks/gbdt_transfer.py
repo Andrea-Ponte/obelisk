@@ -16,13 +16,6 @@ from secml_malware.attack.blackbox.ga.c_base_genetic_engine import CGeneticAlgor
 from secml_malware.attack.blackbox.ga.c_nevergrad_ga import CNevergradGeneticAlgorithm
 
 
-default_win_folder = "/data/aponte/repos/obelisk/data/win_exe/pes/win11/syswow64"
-default_choco_folder = "/data/mkozak/chocolatey-10000/chocolatey-selected-10000-EXE"
-default_transfer_padding_adv_folder = (
-    "/data/aponte/repos/obelisk/data/adv_exe/V2/transfer/gamma1/choco_sections/"
-)
-
-
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
@@ -134,7 +127,7 @@ class OpenGbdt:
         bytes_to_append,
         n_jobs,
         which_attack,
-        goodware_folder: str = default_win_folder,
+        goodware_folder: str = None,
     ):
         malware_chunks = [malware_samples[i::n_jobs] for i in range(n_jobs)]
         print(

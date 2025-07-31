@@ -1,10 +1,6 @@
 from pathlib import Path
 import pandas as pd
 
-default_blacklist = str(Path(__file__).parent.parent / "blacklist_rules_v2")
-
-default_whitelist = str(Path(__file__).parent.parent / "whitelist_rules_v2")
-
 no_fp_rules = (
     pd.read_csv(
         # "/Users/bridge/PhD/Code/obelisk/data/results/V2/yara/rules_with_no_fp.csv",
@@ -16,8 +12,10 @@ no_fp_rules = (
 )
 
 default_whitelist = str(
-    Path(__file__).parent.parent / "whitelist_rules/windows_files.yar"
+    Path(__file__).parent.parent / "allowlist_rules/windows_files.yar"
 )
+default_blacklist = str(Path(__file__).parent.parent / "blacklist_rules_v2")
+
 default_xgb_model = str(
     Path(__file__).parent.parent / "models/V2/xgb/xgb_with_filters.json"
 )
