@@ -9,16 +9,6 @@ from src.utils.interfaces.error_handling import ErrorHandling
 import pandas as pd
 from pathlib import Path
 
-no_fp_rules = (
-    pd.read_csv(
-        # "/Users/bridge/PhD/Code/obelisk/data/results/V2/yara/rules_with_no_fp.csv",
-        "/data/aponte/repos/obelisk/data/results/V2/yara/rules_with_no_fp.csv",
-        header=None,
-    )[0]
-    .astype(str)
-    .tolist()
-)
-
 
 class YaraMatcher(Module):
     def __init__(
