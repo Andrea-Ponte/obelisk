@@ -15,7 +15,7 @@ Here we describe the released assets.
 
 - ### Dynamic Module with Nebula
   We release all the Nebula models trained for each value of $\delta$ used in the ablation study of OBELISK. We also provide the Baseline model, 
-  trained on all the dataset. 
+  trained on all the dataset. For using is needed to install the original repository at https://github.com/dtrizna/nebula
 
 # Attack Interfaces
 
