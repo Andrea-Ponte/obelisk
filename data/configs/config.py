@@ -1,10 +1,13 @@
 from pathlib import Path
 import pandas as pd
 
+
+no_fp_rules_path = str(Path(__file__).parent.parent / "data/models/rules_with_no_fp.csv")
+
 no_fp_rules = (
     pd.read_csv(
         # "/Users/bridge/PhD/Code/obelisk/data/results/V2/yara/rules_with_no_fp.csv",
-        "/data/aponte/repos/obelisk/data/results/V2/yara/rules_with_no_fp.csv",
+        no_fp_rules_path,
         header=None,
     )[0]
     .astype(str)
@@ -32,13 +35,21 @@ default_threshold = 0.03728
 
 default_nebula_threshold = 0.9999479055404664
 
-baseline_xgb_model = str(Path(__file__).parent.parent / "models/V2/xgb/xgb_no_filters.json")
+baseline_xgb_model = str(
+    Path(__file__).parent.parent / "models/V2/xgb/xgb_no_filters.json"
+)
 
-baseline_vocab = str( Path(__file__).parent.parent / "models/V2/nebula/baseline/bpe_vocab.json")
+baseline_vocab = str(
+    Path(__file__).parent.parent / "models/V2/nebula/baseline/bpe_vocab.json"
+)
 
-baseline_bpe_model = str(Path(__file__).parent.parent / "models/V2/nebula/baseline/bpe.model")
+baseline_bpe_model = str(
+    Path(__file__).parent.parent / "models/V2/nebula/baseline/bpe.model"
+)
 
-baseline_nebula_model = str(Path(__file__).parent.parent / "models/V2/nebula/baseline/dynamic_model.pt")
+baseline_nebula_model = str(
+    Path(__file__).parent.parent / "models/V2/nebula/baseline/dynamic_model.pt"
+)
 
 baseline_xgb_threshold = 0.964414
 

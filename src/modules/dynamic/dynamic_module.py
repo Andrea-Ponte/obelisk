@@ -34,7 +34,9 @@ model_config = {
     "norm_first": True,
 }
 
-speakeasy_config = Path(__file__).parent.parent / "models/V2/nebula" / "speakeasy_config.json"
+speakeasy_config = (
+    Path(__file__).parent.parent / "models/V2/nebula" / "speakeasy_config.json"
+)
 
 
 class DynamicModule:
@@ -343,7 +345,7 @@ class DynamicModule:
         self.model.to(device)
         if (isinstance(x, str) or isinstance(x, Path)) and not isinstance(x, dict):
             x = self.normalizer.emulate(str(x))
-            if x == None: 
+            if x == None:
                 return -1
         elif not isinstance(x, dict):
             raise ValueError(
@@ -356,7 +358,7 @@ class DynamicModule:
             logits = self.model(tokenized_data)
             prob = torch.sigmoid(logits)
         return prob.item()
-    
+
     def emulate(self, x):
         x = self.normalizer.emulate(str(x))
         return x
@@ -402,5 +404,3 @@ class DynamicModule:
         #     )
 
         return X_train, y_train
-
-

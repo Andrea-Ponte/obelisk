@@ -5,10 +5,21 @@ import torch
 import yara
 from src.utils.interfaces.module import Module
 
-from src.utils.interfaces.error_handling import ErrorHandling
 import pandas as pd
 from pathlib import Path
 
+
+no_fp_rules_path = str(Path(__file__).parent.parent / "data/models/rules_with_no_fp.csv")
+
+no_fp_rules = (
+    pd.read_csv(
+        # "/Users/bridge/PhD/Code/obelisk/data/results/V2/yara/rules_with_no_fp.csv",
+        no_fp_rules_path,
+        header=None,
+    )[0]
+    .astype(str)
+    .tolist()
+)
 
 class YaraMatcher(Module):
     def __init__(
