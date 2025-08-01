@@ -1,8 +1,7 @@
 from src.modules.dynamic.dynamic_module import DynamicModule
 from src.modules.signatures.yara_matching import YaraMatcher
-from data.configs.config import *
 from src.modules.static.static_module import StaticModule
-
+from pathlib import Path
 
 default_nebula_threshold = 0.9999479055404664
 default_threshold = 0.03728
@@ -40,7 +39,7 @@ default_blacklist = str(Path(__file__).parent.parent / "blacklist_rules_v2")
 
 
 class AISystem:
-    def __init__(self, default=False, baseline=True):
+    def __init__(self, default=True, baseline=False):
         self.white_filter = None
         self.black_filter = None
         self.static_module = None
@@ -85,6 +84,7 @@ class AISystem:
                 vocab_path=baseline_vocab,
             )
 
+    # prediction method of OBELISK
     def predict(self, x):
         white_match = self.white_filter.predict(x)
         if len(white_match) == 1:
@@ -97,9 +97,9 @@ class AISystem:
         # Static
         static_score = self.static_module.predict(x)
 
-        if static_score[0, 1] < default_threshold:
+        if static_score[0, 1] <= default_threshold:
             return "static", 0
-        elif static_score[0, 1] > (1 - default_threshold):
+        elif static_score[0, 1] >= (1 - default_threshold):
             return "static", 1
 
         # Dynamic
@@ -107,6 +107,9 @@ class AISystem:
 
         return "dynamic", dynamic_score
 
+
+    # prediction method of SLIFER (Ponte et al. 2025), where malware are halted as soon as
+    # a module detects it, while goodware are processed by all modules
     def predict_slifer(self, x):
         white_match = self.white_filter.predict(x)
         if len(white_match) == 1:

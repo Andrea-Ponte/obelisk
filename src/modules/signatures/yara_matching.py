@@ -3,7 +3,7 @@ from typing import Optional
 
 import torch
 import yara
-from src.utils.interfaces.module import Module
+from src.utils.module import Module
 
 import pandas as pd
 from pathlib import Path
@@ -25,7 +25,6 @@ class YaraMatcher(Module):
     def __init__(
         self,
         path_to_model: Optional[str] = None,
-        error_handling: Optional[ErrorHandling] = None,
         no_fp=True,
     ):
         # path to model refers to the directory containing the rules
@@ -33,7 +32,8 @@ class YaraMatcher(Module):
         self.matcher = self.load_pretrained_model(self.path_to_model)
         self.no_fp = no_fp
 
-    def load_pretrained_model(self, rules_path: str) -> yara.Rule:
+    @staticmethod
+    def load_pretrained_model(rules_path: str) -> yara.Rule:
         if rules_path is None:
             raise ValueError("Rules path must be provided and must be a directory.")
         elif not os.path.isdir(rules_path):
@@ -66,12 +66,6 @@ class YaraMatcher(Module):
                 match = 1
             else:
                 match = 0
-            # checking how many rules have been triggered
-            # if triggered_rules == 0:
-            #     match = torch.Tensor([0.0])
-            #     matches.append(match)
         except Exception as e:
-            match = torch.Tensor([self.error_handling.value])
-            # matches.append(match)
-        # matches = torch.stack(matches)
+            match = -1
         return matches

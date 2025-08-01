@@ -1,0 +1,168 @@
+
+import multiprocessing
+import os
+from abc import abstractmethod
+
+from secml.array import CArray
+from secml.ml.classifiers import CClassifier
+
+import numpy as np
+from ember import PEFeatureExtractor
+from secml.array import CArray
+from secml.ml.classifiers import CClassifier
+
+from secml.ml.classifiers.sklearn.c_classifier_sklearn import CClassifierSkLearn
+
+import joblib
+from secml_malware.attack.blackbox.c_black_box_padding_evasion import (
+    CBlackBoxPaddingEvasionProblem,
+)
+from secml_malware.attack.blackbox.c_gamma_sections_evasion import (
+    CGammaSectionsEvasionProblem,
+)
+from secml_malware.attack.blackbox.ga.c_base_genetic_engine import CGeneticAlgorithm
+
+from sklearn.preprocessing import MinMaxScaler
+from xgboost import XGBClassifier
+
+from src.modules.signatures.yara_matching import YaraMatcher
+from lightgbm import Booster
+
+
+class AISystemWrapper:
+    def __init__(
+        self,
+        xgb_path=None,
+        white_rules=None,
+        black_rules=None,
+        filter=False,
+        lgbm_path=None,
+        threshold=None,
+        sections = 50
+    ):
+        model = CClassifierXGBoost(
+            lgbm_path=lgbm_path,
+            xgb_path=xgb_path,
+            filter=filter,
+            # white_filter=white_filter,
+            # black_filter=black_filter,
+        )
+        model = CXGBWrapperPhi(model)
+        self.ai_system = model
+        self.threshold = threshold  # baseline with no filters
+
+    def gamma_section_injection(
+        self,
+        malware_sample_path: str,
+        adv_folder,
+        goodware_folder: str = default_win_folder,
+        sections: int = 50,
+    ):
+        section_population, what_from_who = (
+            CGammaSectionsEvasionProblem.create_section_population_from_folder(
+                goodware_folder,
+                how_many=sections,
+                sections_to_extract=[".rdata"],
+                to_ignore= []
+            )
+        )
+        attack = CGammaSectionsEvasionProblem(
+            section_population,
+            self.ai_system,
+            population_size=10,
+            penalty_regularizer=1e-7,
+            iterations=50,
+            threshold=0,
+        )
+        engine = CGeneticAlgorithm(attack)
+        with open(malware_sample_path, "rb") as f:
+            malware_sample = f.read()
+            malware_sample = CArray(np.frombuffer(malware_sample, dtype=np.uint8))
+            malware_sample = malware_sample[0, :]
+        _, adv_score, adv_ds, _ = engine.run(malware_sample, CArray([1]))
+        adv_score = adv_score[-1]
+        if adv_score < self.threshold:
+            print(f"Success! Score: {adv_score}")
+            adv_example = adv_ds.X[0, :]
+            malware_hash = malware_sample_path.split("/")[-1]
+            print(f"Saving file {malware_hash}_adv")
+            engine.write_adv_to_file(adv_example, adv_folder + malware_hash + "_adv")
+        else:
+            print(f"Failed! Score: {adv_score}")
+
+    def padding_attack_single(
+        self, malware_sample_path: str, adv_folder, bytes_to_append
+    ):
+        attack = CBlackBoxPaddingEvasionProblem(
+            self.ai_system,
+            population_size=10,
+            how_many_padding_bytes=bytes_to_append,
+            iterations=50,
+        )
+        engine = CGeneticAlgorithm(attack)
+        with open(malware_sample_path, "rb") as f:
+            malware_sample = f.read()
+            malware_sample = CArray(
+                np.frombuffer(malware_sample, dtype=np.uint8)
+            ).atleast_2d()
+
+        _, adv_score, adv_ds, _ = engine.run(malware_sample, CArray([1]))
+        adv_score = adv_score[-1]
+        if adv_score < self.threshold:
+            print(f"Success! Score: {adv_score}")
+            adv_example = adv_ds.X[0, :]
+            malware_hash = malware_sample_path.split("/")[-1]
+            print(f"Saving file {malware_hash}_adv")
+            engine.write_adv_to_file(
+                adv_example,
+                os.path.join(adv_folder, str(bytes_to_append), malware_hash + "_adv"),
+            )
+        else:
+            print(f"Failed! Score: {adv_score}")
+
+    def mp_attack_starter(
+        self,
+        malware_samples: list,
+        adv_folder: str,
+        n_jobs,
+        which_attack,
+        goodware_folder: str = default_win_folder,
+        bytes_to_append=None,
+    ):
+        malware_chunks = [malware_samples[i::n_jobs] for i in range(n_jobs)]
+        print(
+            f"Splitting {len(malware_samples)} samples into {n_jobs} chunks for multiprocessing."
+        )
+        # if not os.path.exists(adv_folder):
+        #     os.makedirs(adv_folder)
+        with multiprocessing.Pool(processes=n_jobs) as pool:
+            pool.starmap(
+                self.mp_multiple_transfer_attack,
+                [
+                    (
+                        chunk,
+                        adv_folder,
+                        which_attack,
+                        goodware_folder,
+                        self,
+                        bytes_to_append,
+                    )
+                    for chunk in malware_chunks
+                ],
+            )
+
+    @staticmethod
+    def mp_multiple_transfer_attack(
+        malware_samples: list,
+        adv_folder: str,
+        which_attack: str,
+        goodware_folder: str,
+        cls,
+        bytes_to_append=None,
+    ):
+        for i, sample in enumerate(malware_samples):
+            print(f"Processing {i} of {len(malware_samples)}")
+            if which_attack == "padding":
+                cls.padding_attack_single(sample, adv_folder, bytes_to_append)
+            elif which_attack == "gamma":
+                cls.gamma_section_injection(sample, adv_folder, goodware_folder)
