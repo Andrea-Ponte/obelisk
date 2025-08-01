@@ -4,3 +4,4 @@ xgboost
 pathlib
 scikit-learn
 yara-python
+secml

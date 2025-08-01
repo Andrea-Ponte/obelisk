@@ -1,17 +1,13 @@
 import multiprocessing
 import os
 from abc import abstractmethod
-
 from secml.array import CArray
 from secml.ml.classifiers import CClassifier
-
 import numpy as np
 from ember import PEFeatureExtractor
 from secml.array import CArray
 from secml.ml.classifiers import CClassifier
-
 from secml.ml.classifiers.sklearn.c_classifier_sklearn import CClassifierSkLearn
-
 import joblib
 from secml_malware.attack.blackbox.c_black_box_padding_evasion import (
     CBlackBoxPaddingEvasionProblem,
@@ -20,12 +16,6 @@ from secml_malware.attack.blackbox.c_gamma_sections_evasion import (
     CGammaSectionsEvasionProblem,
 )
 from secml_malware.attack.blackbox.ga.c_base_genetic_engine import CGeneticAlgorithm
-
-
-from pathlib import Path
-
-from sympy.diffgeom.rn import theta
-
 from src.modules.attacks.xgb_wrappers import CClassifierXGBoost, CXGBWrapperPhi
 
 
