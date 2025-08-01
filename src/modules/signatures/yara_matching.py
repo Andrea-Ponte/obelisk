@@ -10,7 +10,7 @@ from pathlib import Path
 
 
 no_fp_rules_path = str(
-    Path(__file__).parent.parent / "data/models/rules_with_no_fp.csv"
+    Path(__file__).parent.parent.parent.parent / "data/models/rules_with_no_fp.csv"
 )
 
 no_fp_rules = (
@@ -70,4 +70,4 @@ class YaraMatcher(Module):
                 match = 0
         except Exception as e:
             match = -1
-        return match
+        return matches

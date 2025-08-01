@@ -116,13 +116,13 @@ class CClassifierXGBoost(CClassifier):
 
     def _forward(self, x):
         x = x.atleast_2d()
-        scores = self._xgboost_model.predict_proba(x.tondarray())
+        scores = self._model.predict_proba(x.tondarray())
         confidence = [[1 - c, c] for c in scores]
         confidence = CArray(confidence)
         return confidence
 
     def predict(self, x, return_decision_function=False):
-        if (x == CArray.zeros((x.shape[0], 2381))).all():  # Hobrigado deus
+        if (x == CArray.zeros((x.shape[0], 2381))).all():
             yara_score = np.array([[0.0, 1.0]])
             yara_score = (1, CArray(yara_score))
             return yara_score

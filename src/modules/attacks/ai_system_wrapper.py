@@ -24,6 +24,8 @@ from secml_malware.attack.blackbox.ga.c_base_genetic_engine import CGeneticAlgor
 
 from pathlib import Path
 
+from sympy.diffgeom.rn import theta
+
 from src.modules.attacks.xgb_wrappers import CClassifierXGBoost, CXGBWrapperPhi
 
 
@@ -31,12 +33,9 @@ class AISystemWrapper:
     def __init__(
         self,
         xgb_path=None,
-        white_rules=None,
-        black_rules=None,
         filter=False,
         lgbm_path=None,
         threshold=None,
-        sections=50,
     ):
         model = CClassifierXGBoost(
             lgbm_path=lgbm_path,
@@ -53,6 +52,7 @@ class AISystemWrapper:
         adv_folder,
         goodware_folder: str = None,
         sections: int = 50,
+        threshold: float = 0.80
     ):
         section_population, what_from_who = (
             CGammaSectionsEvasionProblem.create_section_population_from_folder(
@@ -67,8 +67,8 @@ class AISystemWrapper:
             self.ai_system,
             population_size=10,
             penalty_regularizer=1e-7,
-            iterations=50,
-            threshold=0,
+            iterations=sections,
+            threshold=threshold,
         )
         engine = CGeneticAlgorithm(attack)
         with open(malware_sample_path, "rb") as f:

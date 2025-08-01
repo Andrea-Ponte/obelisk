@@ -30,14 +30,9 @@ model_config = {
     "numClasses": 1,  # binary classification
     "classifier_head": [64],  # classifier ffnn dims
     "layerNorm": False,
-    "dropout": 0.3,  #### originale = 0.3
+    "dropout": 0.3,
     "norm_first": True,
 }
-
-speakeasy_config = (
-    Path(__file__).parent.parent / "models/V2/nebula" / "speakeasy_config.json"
-)
-
 
 class DynamicModule:
     def __init__(

@@ -18,6 +18,3 @@ class Module(ABC):
     @abstractmethod
     def predict(self, x): ...
 
-
-def utils():
-    return None

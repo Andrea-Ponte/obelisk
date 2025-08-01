@@ -9,33 +9,33 @@ baseline_xgb_threshold = 0.964414
 baseline_nebula_threshold = 0.9934418201446532
 
 baseline_xgb_model = str(
-    Path(__file__).parent.parent / "models/V2/xgb/xgb_no_filters.json"
+    Path(__file__).parent.parent.parent.parent / "data/models/xgb_no_filters.json"
 )
 baseline_vocab = str(
-    Path(__file__).parent.parent / "models/V2/nebula/baseline/bpe_vocab.json"
+    Path(__file__).parent.parent.parent.parent / "data/models/nebula_ablation_data/baseline/bpe_vocab.json"
 )
 baseline_bpe_model = str(
-    Path(__file__).parent.parent / "models/V2/nebula/baseline/bpe.model"
+    Path(__file__).parent.parent.parent.parent / "data/models/nebula_ablation_data/baseline/bpe.model"
 )
 baseline_nebula_model = str(
-    Path(__file__).parent.parent / "models/V2/nebula/baseline/dynamic_model.pt"
+    Path(__file__).parent.parent.parent.parent / "data/models/nebula_ablation_data/baseline/dynamic_model.pt"
 )
 default_xgb_model = str(
-    Path(__file__).parent.parent / "models/V2/xgb/xgb_with_filters.json"
+    Path(__file__).parent.parent.parent.parent / "data/models/xgb_with_filters.json"
 )
 default_vocab = str(
-    Path(__file__).parent.parent / "nebula_ablation_data/delta_11/bpe_vocab.json"
+    Path(__file__).parent.parent.parent.parent / "data/models/nebula_ablation_data/delta_11/bpe_vocab.json"
 )
 default_bpe_model = str(
-    Path(__file__).parent.parent / "nebula_ablation_data/delta_11/bpe.model"
+    Path(__file__).parent.parent.parent.parent / "data/models/nebula_ablation_data/delta_11/bpe.model"
 )
 default_nebula_model = str(
-    Path(__file__).parent.parent / "nebula_ablation_data/delta_11/dynamic_model.pt"
+    Path(__file__).parent.parent.parent.parent / "data/models/nebula_ablation_data/delta_11/dynamic_model.pt"
 )
 default_whitelist = str(
-    Path(__file__).parent.parent / "allowlist_rules/windows_files.yar"
+    Path(__file__).parent.parent.parent.parent / "data/allowlist_rules/windows_files.yar"
 )
-default_blacklist = str(Path(__file__).parent.parent / "blacklist_rules_v2")
+default_blacklist = str(Path(__file__).parent.parent.parent.parent / "data/blocklist_rules")
 
 
 class AISystem:
@@ -105,7 +105,12 @@ class AISystem:
         # Dynamic
         dynamic_score = self.dynamic_module.predict(x)
 
-        return "dynamic", dynamic_score
+        if dynamic_score == -1:
+            return "dynamic", -1
+        if dynamic_score >= default_nebula_threshold:
+            return "dynamic", 1
+        else:
+            return "dynamic", 0
 
     # prediction method of SLIFER (Ponte et al. 2025), where malware are halted as soon as
     # a module detects it, while goodware are processed by all modules
@@ -117,12 +122,12 @@ class AISystem:
         if len(black_match) != 0:
             return "black_list", 1
         static_score = self.static_module.predict(x)
-        if static_score[0, 1] > baseline_xgb_threshold:
+        if static_score[0, 1] >= baseline_xgb_threshold:
             return "static", 1
         dynamic_score = self.dynamic_module.predict(x)
         if dynamic_score == -1:
             return "dynamic", -1
-        if dynamic_score > baseline_nebula_threshold:
+        if dynamic_score >= baseline_nebula_threshold:
             return "dynamic", 1
         else:
             return "dynamic", 0
