@@ -1,6 +1,6 @@
-# anonymous-obelisk
+# OBELISK
 
-Repository for sharing code of OBELISK, AI System for malware detection. 
+Repository for sharing code and assets used in the paper "_OBELISK: Understanding How Malware Detection AI Systems Succeed and Fail_".
 
 # Modules
 Here we describe the released assets.
