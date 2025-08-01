@@ -9,7 +9,6 @@ class Module(ABC):
     ):
         self.path_to_model = path_to_model
 
-
     @abstractmethod
     def load_pretrained_model(
         self,

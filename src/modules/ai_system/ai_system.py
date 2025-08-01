@@ -107,7 +107,6 @@ class AISystem:
 
         return "dynamic", dynamic_score
 
-
     # prediction method of SLIFER (Ponte et al. 2025), where malware are halted as soon as
     # a module detects it, while goodware are processed by all modules
     def predict_slifer(self, x):

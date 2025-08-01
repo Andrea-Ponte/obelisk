@@ -199,9 +199,6 @@ class DynamicModule:
             self.model.parameters(), lr=1e-4, weight_decay=1e-2
         )
         loss_fn = torch.nn.BCEWithLogitsLoss(pos_weight=pos_weights.to(device))
-        # scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-        #     optimizer, mode="min", factor=0.3, patience=3
-        # )
 
         # device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
         # Create a TensorDataset and DataLoader
@@ -275,13 +272,13 @@ class DynamicModule:
                 if val_auc > best_auc:
                     best_auc = val_auc
                     best_model_state = self.model.state_dict()
-                    # torch.save(
-                    #     best_model_state,
-                    #     os.path.join(
-                    #         save_model_path,
-                    #         f"dynamic_model.pt",
-                    #     ),
-                    # )
+                    torch.save(
+                        best_model_state,
+                        os.path.join(
+                            save_model_path,
+                            f"dynamic_model.pt",
+                        ),
+                    )
             val_loss /= len(val_dataloader)
             # scheduler.step(val_loss)
             val_acc = val_correct / val_total if val_total > 0 else 0.0
@@ -382,25 +379,5 @@ class DynamicModule:
         X_train = torch.tensor(tokenized_data, dtype=torch.long)
         y_train = torch.tensor(y, dtype=torch.long)
 
-        # if save_path is not None:
-        #     print("Moving files...")
-
-        #     vocab_path = "/data/aponte/repos/obelisk/bpe_vocab.json"
-        #     bpe_model_path = "/data/aponte/repos/obelisk/bpe.model"
-
-        #     os.makedirs(save_path, exist_ok=True)
-        #     shutil.move(
-        #         vocab_path, os.path.join(save_path, os.path.basename(vocab_path))
-        #     )
-        #     shutil.move(
-        #         bpe_model_path,
-        #         os.path.join(save_path, os.path.basename(bpe_model_path)),
-        #     )
-
-        #     print("Saving dataset...")
-        #     torch.save(
-        #         {"X_train": X_train, "y_train": y_train},
-        #         os.path.join(save_path, "trainset.pt"),
-        #     )
 
         return X_train, y_train

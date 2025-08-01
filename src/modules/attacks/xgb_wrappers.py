@@ -26,14 +26,13 @@ from xgboost import XGBClassifier
 
 from src.modules.signatures.yara_matching import YaraMatcher
 from lightgbm import Booster
+from pathlib import Path
 
 
-# white_filter = YaraMatcher(path_to_model='/data/aponte/repos/obelisk/data/whitelist_rules/windows_files.yar')
-# black_filter = YaraMatcher(path_to_model='/data/aponte/repos/obelisk/data/blacklist_rules')
-
-
-default_win_folder = "/data/aponte/repos/obelisk/data/win_exe/pes/win11/syswow64"
-default_choco_folder = "/data/mkozak/chocolatey-10000/chocolatey-selected-10000-EXE"
+default_whitelist = str(
+    Path(__file__).parent.parent / "allowlist_rules/windows_files.yar"
+)
+default_blacklist = str(Path(__file__).parent.parent / "blacklist_rules_v2")
 
 
 class CWrapperPhi:
@@ -48,14 +47,6 @@ class CWrapperPhi:
 
     def predict(self, x: CArray, return_decision_function: bool = True):
         x = x.atleast_2d()
-        # feature_vectors = []
-        # for i in range(x.shape[0]):
-        # 	x_i = x[i, :]
-        # 	padding_position = x_i.find(x_i == 256)
-        # 	if padding_position:
-        # 		x_i = x_i[0, :padding_position[0]]
-        # 	feature_vectors.append(self.extract_features(x_i))
-        # feature_vectors = CArray(feature_vectors)
         feature_vectors = self.extract_features(x)
         return self.classifier.predict(
             feature_vectors, return_decision_function=return_decision_function
@@ -85,15 +76,6 @@ class CClassifierXGBoost(CClassifier):
             self._model = self._load_tree(xgb_path)
             self.model_name = "xgb"
         self.filter = filter
-        # if filter:
-        # self.white_filter = white_filter
-        # self.black_filter = black_filter
-        # self.white_filter = YaraMatcher(
-        #     path_to_model="/data/aponte/repos/obelisk/data/whitelist_rules/windows_files.yar"
-        #      )
-        # self.black_filter = YaraMatcher(
-        #     path_to_model="/data/aponte/repos/obelisk/data/blacklist_rules_v2"
-        # )
 
     def extract_features(self, x: CArray) -> CArray:
         extractor = PEFeatureExtractor(2, print_feature_warning=False)
@@ -103,13 +85,8 @@ class CClassifierXGBoost(CClassifier):
         x_i = x[0, :]
         x_bytes = bytes(x_i.astype(np.uint8).tolist()[0])
         if self.filter:
-            white_filter = YaraMatcher(
-                path_to_model="/data/aponte/repos/obelisk/data/whitelist_rules/windows_files.yar"
-            )
-            black_filter = YaraMatcher(
-                path_to_model="/data/aponte/repos/obelisk/data/blacklist_rules_v2"
-            )
-            # negli attacchi non può succedere
+            white_filter = YaraMatcher(path_to_model=default_whitelist)
+            black_filter = YaraMatcher(path_to_model=default_blacklist)
             yara_white = white_filter.predict(x_bytes)
             yara_black = black_filter.predict(x_bytes)
             if len(yara_black) != 0:
@@ -155,23 +132,10 @@ class CClassifierXGBoost(CClassifier):
             if self.model_name == "xgb"
             else self._model.predict(x.tondarray())
         )
-        # print(f"Scores shape: {scores.shape}, type: {type(scores)}")
 
         if self.model_name == "lgbm":
             scores = [[1 - scores[0], scores[0]]]
 
-        # # Checking if the score is higher than ember model threshold
-        # labels = (scores > 0.82).astype(int)
-
-        # label = labels.argmax(axis=1).ravel()
-
-        # Ensure scores is a CArray of shape (1, 2) for compatibility with confidence[0, 1].item()
-        # if isinstance(scores, np.ndarray):
-        #     scores = CArray(scores)
-        # if scores.ndim == 1:
-        #     # If scores is (1,), convert to (1, 2) with [1-c, c]
-        #     c = scores[0]
-        #     scores = [[1 - c, c]]
         return (0, CArray(scores))
 
 
@@ -195,6 +159,3 @@ class CXGBWrapperPhi(CWrapperPhi):
             else:
                 feature_vectors[i, :] = clf.extract_features(x_i)
         return feature_vectors
-
-
-

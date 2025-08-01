@@ -9,17 +9,19 @@ import pandas as pd
 from pathlib import Path
 
 
-no_fp_rules_path = str(Path(__file__).parent.parent / "data/models/rules_with_no_fp.csv")
+no_fp_rules_path = str(
+    Path(__file__).parent.parent / "data/models/rules_with_no_fp.csv"
+)
 
 no_fp_rules = (
     pd.read_csv(
-        # "/Users/bridge/PhD/Code/obelisk/data/results/V2/yara/rules_with_no_fp.csv",
         no_fp_rules_path,
         header=None,
     )[0]
     .astype(str)
     .tolist()
 )
+
 
 class YaraMatcher(Module):
     def __init__(
@@ -28,7 +30,7 @@ class YaraMatcher(Module):
         no_fp=True,
     ):
         # path to model refers to the directory containing the rules
-        super().__init__(path_to_model, error_handling)
+        super().__init__(path_to_model)
         self.matcher = self.load_pretrained_model(self.path_to_model)
         self.no_fp = no_fp
 
@@ -68,4 +70,4 @@ class YaraMatcher(Module):
                 match = 0
         except Exception as e:
             match = -1
-        return matches
+        return match

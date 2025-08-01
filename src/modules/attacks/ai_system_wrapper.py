@@ -1,4 +1,3 @@
-
 import multiprocessing
 import os
 from abc import abstractmethod
@@ -22,11 +21,10 @@ from secml_malware.attack.blackbox.c_gamma_sections_evasion import (
 )
 from secml_malware.attack.blackbox.ga.c_base_genetic_engine import CGeneticAlgorithm
 
-from sklearn.preprocessing import MinMaxScaler
-from xgboost import XGBClassifier
 
-from src.modules.signatures.yara_matching import YaraMatcher
-from lightgbm import Booster
+from pathlib import Path
+
+from src.modules.attacks.xgb_wrappers import CClassifierXGBoost, CXGBWrapperPhi
 
 
 class AISystemWrapper:
@@ -38,14 +36,12 @@ class AISystemWrapper:
         filter=False,
         lgbm_path=None,
         threshold=None,
-        sections = 50
+        sections=50,
     ):
         model = CClassifierXGBoost(
             lgbm_path=lgbm_path,
             xgb_path=xgb_path,
             filter=filter,
-            # white_filter=white_filter,
-            # black_filter=black_filter,
         )
         model = CXGBWrapperPhi(model)
         self.ai_system = model
@@ -55,7 +51,7 @@ class AISystemWrapper:
         self,
         malware_sample_path: str,
         adv_folder,
-        goodware_folder: str = default_win_folder,
+        goodware_folder: str = None,
         sections: int = 50,
     ):
         section_population, what_from_who = (
@@ -63,7 +59,7 @@ class AISystemWrapper:
                 goodware_folder,
                 how_many=sections,
                 sections_to_extract=[".rdata"],
-                to_ignore= []
+                to_ignore=[],
             )
         )
         attack = CGammaSectionsEvasionProblem(
@@ -126,15 +122,14 @@ class AISystemWrapper:
         adv_folder: str,
         n_jobs,
         which_attack,
-        goodware_folder: str = default_win_folder,
+        goodware_folder: str = None,
         bytes_to_append=None,
     ):
         malware_chunks = [malware_samples[i::n_jobs] for i in range(n_jobs)]
         print(
             f"Splitting {len(malware_samples)} samples into {n_jobs} chunks for multiprocessing."
         )
-        # if not os.path.exists(adv_folder):
-        #     os.makedirs(adv_folder)
+
         with multiprocessing.Pool(processes=n_jobs) as pool:
             pool.starmap(
                 self.mp_multiple_transfer_attack,
