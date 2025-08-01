@@ -26,5 +26,11 @@ also for models, by specifying the parameter "filtered=False" in the init of the
 The Anderson et al. model can be found at **https://github.com/endgameinc/malware_evasion_competition/tree/master/models/ember**
 
 
-
+# Script to run OBELISK
+We provide a simple script to run OBELISK and Baseline inference. The script is located in the root directory, and can be run
+with the command:
+```bash
+python ai_sys_inference.py <sample_path>
+```
+where `<sample_path>` is the path to the sample to be analyzed. The script will output the result of the inference both for OBELISK and Baseline.
 

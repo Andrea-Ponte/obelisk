@@ -11,10 +11,10 @@ if __name__ == "__main__":
     x_path = sys.argv[1]
 
     y_obelisk = obelisk.predict(x_path)
-    y_baseline = baseline.predict_slifer(x_path)
+    y_baseline = baseline.predict(x_path)
 
-    print(y_obelisk)
-    print(y_baseline)
+    print(f"OBELISK prediction: {y_obelisk}")
+    print(f"Baseline prediction: {y_baseline}")
 
 
 

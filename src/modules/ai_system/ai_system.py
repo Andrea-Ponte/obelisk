@@ -45,6 +45,8 @@ class AISystem:
         self.static_module = None
         self.dynamic_module = None
 
+        self.baseline =  baseline
+
         if default:
             self.init_system(default=default)
         elif baseline:
@@ -86,6 +88,8 @@ class AISystem:
 
     # prediction method of OBELISK
     def predict(self, x):
+        if self.baseline:
+            return self.predict_slifer(x)
         white_match = self.white_filter.predict(x)
         if len(white_match) == 1:
             return "white_list", 0
