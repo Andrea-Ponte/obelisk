@@ -2,38 +2,42 @@ from src.modules.attacks.ai_system_wrapper import AISystemWrapper
 
 
 
-#init model surrogates for the attack on the TMs.
+#init model surrogates for the attack on the TMs. The thresholds are set randomly for this example.
 
 tm1_surrogate = AISystemWrapper(
     lgbm_path="path_to_anderson_lgbm_model.txt",
-    filter=False
+    filter=False,
+    threshold=0.80
 )
 
 tm2_surrogate = AISystemWrapper(
     xgb_path="data/models/xgb_with_filters.json", #or xgb_path="data/models/xgb_no_filters.json" if attacking the model in the baseline
-    filter=False
+    filter=False,
+    threshold=0.75
+
 )
 
 tm3_surrogate = AISystemWrapper(
     lgbm_path="path_to_anderson_lgbm_model.json",
-    filter=True
+    filter=True,
+    threshold=0.80
 )
 
-# initialization of TM4
 tm4_surrogate = AISystemWrapper(
     xgb_path="data/models/xgb_with_filters.json", #or xgb_path="data/models/xgb_no_filters.json" if attacking the model in the baseline
-    filter=True)
+    filter=True,
+    threshold=0.70
+)
 
 adv_gamma = tm1_surrogate.gamma_section_injection_single(
     malware_sample_path="path_to_malware_sample.exe",
     adv_folder="path_to_adv_folder",
     goodware_folder="path_to_goodware_folder",
-    sections=50,
-    threshold=0.80
+    sections=50
 )
 
-adv_paddng = tm1_surrogate.padding_attack_single(
+adv_padding = tm1_surrogate.padding_attack_single(
     malware_sample_path="path_to_malware_sample.exe",
-    bytes_to_append=100,
+    bytes_to_append=1024,
     adv_folder="path_to_adv_folder"
 )

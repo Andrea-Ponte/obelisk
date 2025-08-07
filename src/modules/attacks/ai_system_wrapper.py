@@ -34,7 +34,7 @@ class AISystemWrapper:
         )
         model = CXGBWrapperPhi(model)
         self.ai_system = model
-        self.threshold = threshold  # baseline with no filters
+        self.threshold = threshold
 
     def gamma_section_injection_single(
         self,
@@ -42,7 +42,6 @@ class AISystemWrapper:
         adv_folder,
         goodware_folder: str = None,
         sections: int = 50,
-        threshold: float = 0.80
     ):
         section_population, what_from_who = (
             CGammaSectionsEvasionProblem.create_section_population_from_folder(
@@ -58,7 +57,6 @@ class AISystemWrapper:
             population_size=10,
             penalty_regularizer=1e-7,
             iterations=sections,
-            threshold=threshold,
         )
         engine = CGeneticAlgorithm(attack)
         with open(malware_sample_path, "rb") as f:
@@ -77,7 +75,7 @@ class AISystemWrapper:
             print(f"Failed! Score: {adv_score}")
 
     def padding_attack_single(
-        self, malware_sample_path: str, adv_folder, bytes_to_append
+        self, malware_sample_path: str, adv_folder, bytes_to_append, threshold=None
     ):
         attack = CBlackBoxPaddingEvasionProblem(
             self.ai_system,
@@ -94,7 +92,7 @@ class AISystemWrapper:
 
         _, adv_score, adv_ds, _ = engine.run(malware_sample, CArray([1]))
         adv_score = adv_score[-1]
-        if adv_score < self.threshold:
+        if adv_score < threshold:
             print(f"Success! Score: {adv_score}")
             adv_example = adv_ds.X[0, :]
             malware_hash = malware_sample_path.split("/")[-1]

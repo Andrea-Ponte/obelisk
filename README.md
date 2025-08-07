@@ -34,3 +34,5 @@ python ai_sys_inference.py <sample_path>
 ```
 where `<sample_path>` is the path to the sample to be analyzed. The script will output the result of the inference both for OBELISK and Baseline.
 
+We also provide the script (```attack_on_tm.py```) to initialize the Threat Models with the AI System Wrapper. We provide an example
+to run gamma and padding attacks. 
