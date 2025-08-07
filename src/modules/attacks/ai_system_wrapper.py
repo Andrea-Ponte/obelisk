@@ -36,7 +36,7 @@ class AISystemWrapper:
         self.ai_system = model
         self.threshold = threshold  # baseline with no filters
 
-    def gamma_section_injection(
+    def gamma_section_injection_single(
         self,
         malware_sample_path: str,
         adv_folder,
@@ -106,6 +106,8 @@ class AISystemWrapper:
         else:
             print(f"Failed! Score: {adv_score}")
 
+
+    # Multiprocessing attack starter
     def mp_attack_starter(
         self,
         malware_samples: list,
@@ -122,7 +124,7 @@ class AISystemWrapper:
 
         with multiprocessing.Pool(processes=n_jobs) as pool:
             pool.starmap(
-                self.mp_multiple_transfer_attack,
+                self.mp_multiple_attack,
                 [
                     (
                         chunk,
@@ -137,7 +139,7 @@ class AISystemWrapper:
             )
 
     @staticmethod
-    def mp_multiple_transfer_attack(
+    def mp_multiple_attack(
         malware_samples: list,
         adv_folder: str,
         which_attack: str,
@@ -150,4 +152,4 @@ class AISystemWrapper:
             if which_attack == "padding":
                 cls.padding_attack_single(sample, adv_folder, bytes_to_append)
             elif which_attack == "gamma":
-                cls.gamma_section_injection(sample, adv_folder, goodware_folder)
+                cls.gamma_section_injection_single(sample, adv_folder, goodware_folder)
