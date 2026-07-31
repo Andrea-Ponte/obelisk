@@ -39,57 +39,114 @@ default_blacklist = str(Path(__file__).parent.parent.parent.parent / "data/block
 
 
 class AISystem:
-    def __init__(self, default=True, baseline=False):
+    """Pipeline that combines rule-based, static, and dynamic malware detection."""
+
+    def __init__(
+            self,
+            baseline=False,
+            static_model_path=None,
+            dynamic_model_path=None,
+            bpe_model_path=None,
+            vocab_path=None,
+            static_malware_threshold=None,
+            static_goodware_threshold=None,
+            dynamic_threshold=None,
+    ):
+        """Initialize the system in baseline mode or with explicit custom model paths."""
         self.white_filter = None
         self.black_filter = None
         self.static_module = None
         self.dynamic_module = None
+        self.static_malware_threshold = None
+        self.static_goodware_threshold = None
+        self.dynamic_threshold = dynamic_threshold
+        self.baseline = baseline
 
-        self.baseline =  baseline
+        self.init_system(
+            baseline=baseline,
+            static_model_path=static_model_path,
+            dynamic_model_path=dynamic_model_path,
+            bpe_model_path=bpe_model_path,
+            vocab_path=vocab_path,
+            static_malware_threshold=static_malware_threshold,
+            static_goodware_threshold=static_goodware_threshold,
+            dynamic_threshold=dynamic_threshold,
+        )
 
-        if default:
-            self.init_system(default=default)
-        elif baseline:
-            self.init_system(baseline=baseline)
-        else:
-            raise ValueError(
-                "You must specify either default=True or baseline=True to initialize the AISystem."
-            )
-
-    def init_system(self, default=False, baseline=False):
-        if default:
-            self.white_filter = YaraMatcher(path_to_model=default_whitelist)
-            self.black_filter = YaraMatcher(path_to_model=default_blacklist)
-            self.static_module = StaticModule(
-                model_name="XGB",
-                fetch_pretrained=True,
-                pretrained_path=default_xgb_model,
-            )
-            self.dynamic_module = DynamicModule(
-                fetch_pretrained=True,
-                model_path=default_nebula_model,
-                bpe_model_path=default_bpe_model,
-                vocab_path=default_vocab,
-            )
+    def init_system(
+            self,
+            baseline=False,
+            static_model_path=None,
+            dynamic_model_path=None,
+            bpe_model_path=None,
+            vocab_path=None,
+            static_malware_threshold=None,
+            static_goodware_threshold=None,
+            dynamic_threshold=None,
+    ):
+        """Load filters and models, then configure thresholds for the selected mode."""
         if baseline:
-            self.white_filter = YaraMatcher(path_to_model=default_whitelist)
-            self.black_filter = YaraMatcher(path_to_model=default_blacklist)
-            self.static_module = StaticModule(
-                model_name="XGB",
-                fetch_pretrained=True,
-                pretrained_path=baseline_xgb_model,
+            self.static_goodware_threshold = static_goodware_threshold
+            self.static_malware_threshold = (
+                baseline_xgb_threshold
+                if static_malware_threshold is None
+                else static_malware_threshold
             )
-            self.dynamic_module = DynamicModule(
-                fetch_pretrained=True,
-                model_path=baseline_nebula_model,
-                bpe_model_path=baseline_bpe_model,
-                vocab_path=baseline_vocab,
+            self.dynamic_threshold = (
+                baseline_nebula_threshold
+                if dynamic_threshold is None
+                else dynamic_threshold
             )
 
-    # prediction method of OBELISK
-    def predict(self, x):
-        if self.baseline:
-            return self.predict_slifer(x)
+            selected_static_model = static_model_path or baseline_xgb_model
+            selected_dynamic_model = dynamic_model_path or baseline_nebula_model
+            selected_bpe_model = bpe_model_path or baseline_bpe_model
+            selected_vocab = vocab_path or baseline_vocab
+        else:
+            self.static_goodware_threshold = (
+                default_threshold if static_goodware_threshold is None else static_goodware_threshold
+            )
+            self.static_malware_threshold = (
+                (1 - default_threshold) if static_malware_threshold is None else static_malware_threshold
+            )
+            self.dynamic_threshold = dynamic_threshold
+
+            missing_params = []
+            if static_model_path is None:
+                missing_params.append("static_model_path")
+            if dynamic_model_path is None:
+                missing_params.append("dynamic_model_path")
+            if bpe_model_path is None:
+                missing_params.append("bpe_model_path")
+            if vocab_path is None:
+                missing_params.append("vocab_path")
+
+            if missing_params:
+                raise ValueError(
+                    "When baseline=False you must pass all model paths in the constructor. Missing: "
+                    + ", ".join(missing_params)
+                )
+
+            selected_static_model = static_model_path
+            selected_dynamic_model = dynamic_model_path
+            selected_bpe_model = bpe_model_path
+            selected_vocab = vocab_path
+
+        self.white_filter = YaraMatcher(path_to_model=default_whitelist)
+        self.black_filter = YaraMatcher(path_to_model=default_blacklist)
+        self.static_module = StaticModule(
+            model_name="XGB", fetch_pretrained=True, pretrained_path=selected_static_model
+        )
+        self.dynamic_module = DynamicModule(
+            fetch_pretrained=True,
+            model_path=selected_dynamic_model,
+            bpe_model_path=selected_bpe_model,
+            vocab_path=selected_vocab,
+        )
+
+    def predict(self, x, separate_scores=False, filter=True):
+        """Return the first final decision from rules/static checks, or dynamic output otherwise."""
+
         white_match = self.white_filter.predict(x)
         if len(white_match) == 1:
             return "white_list", 0
@@ -98,40 +155,52 @@ class AISystem:
         if len(black_match) != 0:
             return "black_list", 1
 
-        # Static
         static_score = self.static_module.predict(x)
 
-        if static_score[0, 1] <= default_threshold:
+        if (
+                self.static_goodware_threshold is not None
+                and static_score[0, 1] < self.static_goodware_threshold
+        ):
             return "static", 0
-        elif static_score[0, 1] >= (1 - default_threshold):
+        elif static_score[0, 1] > self.static_malware_threshold:
             return "static", 1
 
-        # Dynamic
         dynamic_score = self.dynamic_module.predict(x)
+        if self.dynamic_threshold is not None:
+            if dynamic_score == -1:
+                return "dynamic", -1
+            return "dynamic", 1 if dynamic_score > self.dynamic_threshold else 0
+        return "dynamic", dynamic_score
 
-        if dynamic_score == -1:
-            return "dynamic", -1
-        if dynamic_score >= default_nebula_threshold:
-            return "dynamic", 1
-        else:
-            return "dynamic", 0
+    def predict_separate(self, x, separate_scores=True):
+        """Return intermediate outputs from each stage for analysis or debugging."""
 
-    # prediction method of SLIFER (Ponte et al. 2025), where malware are halted as soon as
-    # a module detects it, while goodware are processed by all modules
-    def predict_slifer(self, x):
+        scores = []
+
         white_match = self.white_filter.predict(x)
-        if len(white_match) == 1:
+        scores += ["white_list", 1 if len(white_match) == 1 else None]
+        if not separate_scores and len(white_match) == 1:
             return "white_list", 0
+
         black_match = self.black_filter.predict(x)
-        if len(black_match) != 0:
+        scores += ["black_list", 1 if len(black_match) != 0 else None]
+        if not separate_scores and len(black_match) != 0:
             return "black_list", 1
+
         static_score = self.static_module.predict(x)
-        if static_score[0, 1] >= baseline_xgb_threshold:
-            return "static", 1
+        static_val = static_score[0, 1]
+        scores += ["static", static_val]
+
         dynamic_score = self.dynamic_module.predict(x)
-        if dynamic_score == -1:
-            return "dynamic", -1
-        if dynamic_score >= baseline_nebula_threshold:
-            return "dynamic", 1
-        else:
-            return "dynamic", 0
+        scores += ["dynamic", dynamic_score]
+
+        if separate_scores:
+            return scores
+
+        return "dynamic", dynamic_score
+
+
+
+
+
+

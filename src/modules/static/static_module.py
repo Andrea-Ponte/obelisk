@@ -78,7 +78,7 @@ class StaticModule(Module):
                 x = self.extract_features(x)
             score = self.model.predict_proba(x)
             return score
-        return None
+        return -1
 
     def save_model(self, path):
         if self.model_name == "XGB":
@@ -88,11 +88,13 @@ class StaticModule(Module):
 
     @staticmethod
     def extract_features(x):
-        extractor = PEFeatureExtractor(print_feature_warning=False)
+        extractor = PEFeatureExtractor(2, print_feature_warning=False)
         if isinstance(x, str) or isinstance(x, Path):
             with open(x, "rb") as f:
-                bytes = f.read()
-                x = np.frombuffer(bytes, dtype=np.uint8)
-                x = bytearray(x)
-        features = np.array(extractor.feature_vector(x)).reshape(1, -1)
+                x = f.read()
+                x = np.frombuffer(x, dtype=np.uint8)
+        if 256 in x:
+            x = x[:x.index(256)]
+        x_b = bytes(x)
+        features = np.array(extractor.feature_vector(x_b)).reshape(1, -1)
         return features

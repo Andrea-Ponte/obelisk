@@ -1,7 +1,5 @@
 from src.modules.attacks.ai_system_wrapper import AISystemWrapper
 
-
-
 #init model surrogates for the attack on the TMs. The thresholds are set randomly for this example.
 
 tm1_surrogate = AISystemWrapper(

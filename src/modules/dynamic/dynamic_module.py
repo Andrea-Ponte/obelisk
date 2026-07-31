@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+import time
 
 from nebula import Nebula, PEDynamicFeatureExtractor
 
@@ -14,10 +15,9 @@ from tqdm import tqdm
 from sklearn.utils.class_weight import compute_class_weight
 import numpy as np
 import shutil
-from torch.utils.tensorboard import SummaryWriter
+# from torch.utils.tensorboard import SummaryWriter
 from torch.profiler import profile, record_function, ProfilerActivity
 from sklearn.metrics import roc_auc_score
-
 
 model_config = {
     "vocab_size": 50000,
@@ -34,14 +34,17 @@ model_config = {
     "norm_first": True,
 }
 
+speakeasy_config = Path(__file__).parent.parent / "speakeasy_config.json"
+
+
 class DynamicModule:
     def __init__(
-        self,
-        model_name: str = "nebula",
-        fetch_pretrained: bool = False,
-        model_path: str = None,
-        vocab_path: str = None,
-        bpe_model_path: str = None,
+            self,
+            model_name: str = "nebula",
+            fetch_pretrained: bool = False,
+            model_path: str = None,
+            vocab_path: str = None,
+            bpe_model_path: str = None,
     ):
         super().__init__()
         self.model = None
@@ -49,10 +52,6 @@ class DynamicModule:
         self.preprocessor = None
 
         if fetch_pretrained:
-            # if pretrained_path is None:
-            #     raise ValueError(
-            #         "pretrained_path must be specified when fetch_pretrained is True"
-            #     )
             self.load_pretrained_model(
                 model_name=model_name,
                 vocab_path=vocab_path,
@@ -77,12 +76,12 @@ class DynamicModule:
         self.model = TransformerEncoderChunks(**model_config)
 
     def load_pretrained_model(
-        self,
-        vocab_path,
-        bpe_model_path,
-        model_path,
-        default=False,
-        model_name: str = "nebula",
+            self,
+            vocab_path,
+            bpe_model_path,
+            model_path,
+            default=False,
+            model_name: str = "nebula",
     ):
         if model_name == "nebula" and default:
             self.model = Nebula(
@@ -102,15 +101,15 @@ class DynamicModule:
             self.normalizer = nebula.preprocessing.pe.PEDynamicFeatureExtractor()
 
     def train_module(
-        self,
-        X=None,
-        y=None,
-        device=None,
-        data_path=None,
-        batch_size=64,
-        epochs=60,
-        validation_split=0.1,
-        save_model_path=None,
+            self,
+            X=None,
+            y=None,
+            device=None,
+            data_path=None,
+            batch_size=64,
+            epochs=60,
+            validation_split=0.1,
+            save_model_path=None,
     ):
         if data_path is not None:
             data = torch.load(data_path)
@@ -148,7 +147,6 @@ class DynamicModule:
             raise NotImplementedError("diocan, dammi tempo")
 
         # Train the model
-        # Extract penultimate part of save_model_path for log_path
         log_path = None
         if save_model_path is not None:
             log_path = os.path.basename(os.path.dirname(save_model_path))
@@ -164,24 +162,16 @@ class DynamicModule:
             save_model_path=save_model_path,
         )
 
-        # if save_model_path is not None:
-        #     print("Saving model...")
-        #     os.makedirs(save_model_path, exist_ok=True)
-        #     torch.save(
-        #         self.model.state_dict(),
-        #         save_model_path + "dynamic_model.pt",
-        #     )
-
     def train_model(
-        self,
-        dataloader,
-        val_dataloader,
-        device,
-        epochs,
-        pos_weights,
-        logger=False,
-        log_path=None,
-        save_model_path=None,
+            self,
+            dataloader,
+            val_dataloader,
+            device,
+            epochs,
+            pos_weights,
+            logger=False,
+            log_path=None,
+            save_model_path=None,
     ):
         print("Training model...")
 
@@ -194,15 +184,10 @@ class DynamicModule:
             self.model.parameters(), lr=1e-4, weight_decay=1e-2
         )
         loss_fn = torch.nn.BCEWithLogitsLoss(pos_weight=pos_weights.to(device))
-
         # device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
         # Create a TensorDataset and DataLoader
         self.model.train()
         self.model.to(device)
-        if logger:
-            writer = SummaryWriter(
-                log_dir="./logs3/" + log_path
-            )  # Default log_dir is ./runs
 
         for epoch in range(epochs):
             running_loss = 0.0
@@ -210,7 +195,7 @@ class DynamicModule:
             total = 0
             self.model.train()
             for batch_idx, batch in enumerate(
-                tqdm(dataloader, desc=f"Epoch {epoch+1}/{epochs} [Train]")
+                    tqdm(dataloader, desc=f"Epoch {epoch + 1}/{epochs} [Train]")
             ):
                 inputs, labels = batch
                 labels = labels.unsqueeze(1)
@@ -229,8 +214,6 @@ class DynamicModule:
 
             epoch_loss = running_loss / len(dataloader)
             train_acc = correct / total if total > 0 else 0.0
-            if logger:
-                writer.add_scalar("Loss/train", epoch_loss, epoch)
 
             self.model.eval()
             val_loss = 0.0
@@ -240,7 +223,7 @@ class DynamicModule:
             val_outputs_all = []
             with torch.no_grad():
                 for val_batch in tqdm(
-                    val_dataloader, desc=f"Epoch {epoch+1}/{epochs} [Val]"
+                        val_dataloader, desc=f"Epoch {epoch + 1}/{epochs} [Val]"
                 ):
                     val_inputs, val_labels = val_batch
                     val_labels = val_labels.unsqueeze(1)
@@ -267,39 +250,44 @@ class DynamicModule:
                 if val_auc > best_auc:
                     best_auc = val_auc
                     best_model_state = self.model.state_dict()
-                    torch.save(
-                        best_model_state,
-                        os.path.join(
-                            save_model_path,
-                            f"dynamic_model.pt",
-                        ),
-                    )
+                    if save_model_path is not None:
+                        torch.save(
+                            best_model_state,
+                            os.path.join(
+                                save_model_path,
+                                f"dynamic_model.pt",
+                            )
+                        )
             val_loss /= len(val_dataloader)
-            # scheduler.step(val_loss)
             val_acc = val_correct / val_total if val_total > 0 else 0.0
-            if logger:
-                writer.add_scalar("Loss/val", val_loss, epoch)
-                writer.add_scalar("Acc/val", val_acc, epoch)
-                writer.add_scalar("AUC/val", val_auc, epoch)
 
             print(
-                f"Epoch {epoch+1}/{epochs} | Train Loss: {epoch_loss:.4f} | Train Acc: {train_acc:.4f} | Val Loss: {val_loss:.4f} | Val Acc: {val_acc:.4f}"
+                f"Epoch {epoch + 1}/{epochs} | Train Loss: {epoch_loss:.4f} | Train Acc: {train_acc:.4f} | Val Loss: {val_loss:.4f} | Val Acc: {val_acc:.4f}"
             )
 
-        if logger:
-            writer.close()
-
-    def preprocess_dataset(self, X, y, save_path=None):
+    def preprocess_dataset(self, X, y, save_path=None, times=False):
         filtered_data = []
 
+        if times:
+            filter_norm_time = time.time()
         for sample in X:
             filtered_data.append(self.normalizer.filter_and_normalize_report(sample))
+        if times:
+            filter_norm_time = time.time() - filter_norm_time
 
         print("Training tokenizer...")
+        if times:
+            tokenizer_time = time.time()
         self.preprocessor.train(jsonData=filtered_data)
+        if times:
+            tokenizer_time = time.time() - tokenizer_time
 
         print("Encoding data...")
+        if times:
+            encoding_time = time.time()
         tokenized_data = self.preprocessor.encode(filtered_data)
+        if times:
+            encoding_time = time.time() - encoding_time
 
         X_train = torch.tensor(tokenized_data, dtype=torch.long)
         y_train = torch.tensor(y, dtype=torch.long)
@@ -324,6 +312,9 @@ class DynamicModule:
                 {"X_train": X_train, "y_train": y_train},
                 os.path.join(save_path, "trainset.pt"),
             )
+
+        if times:
+            return X_train, y_train, filter_norm_time, tokenizer_time, encoding_time
 
         return X_train, y_train
 
@@ -374,5 +365,6 @@ class DynamicModule:
         X_train = torch.tensor(tokenized_data, dtype=torch.long)
         y_train = torch.tensor(y, dtype=torch.long)
 
-
         return X_train, y_train
+
+
