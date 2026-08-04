@@ -49,4 +49,4 @@ The script prints, for each of the five systems, which level took the final deci
 
 ## Citation
  
-The paper is actually under review.
+The paper is currently under review.
