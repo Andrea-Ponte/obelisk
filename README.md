@@ -27,16 +27,26 @@ Wrappers implementing the black-box evasion attacks (GAMMA section injection and
 - **`gbdt_transfer.py`** (`OpenGbdt`) — attacks the open-source EMBER-based surrogate model of [Anderson et al.](https://arxiv.org/abs/1804.04637); used for A1 and A2. Model weights: **https://github.com/endgameinc/malware_evasion_competition/tree/master/models/ember**.
 - **`xgb_wrappers.py`** (`CClassifierXGBoost` / `CXGBWrapperPhi`) — attacks the static XGBoost model deployed inside OBELISK; used for A3 and A4.
 - **`ai_system_wrapper.py`** (`AISystemWrapper`) — attacks a surrogate Compound AI System; used for A2 and A4. It can also be used for A1 and A3 by initializing it with `filter=False`, which disables the signature level.
+
 ## Running OBELISK
  
-`ai_sys_inference.py` runs inference on a single sample with both OBELISK (filtered pipeline) and the STND baseline:
+`ai_sys_inference.py` instantiates the five representative Compound AI System configurations analyzed in the paper (Sect. V-D) — **STND**, **OBV1@δ6**, **OBV2@δ6**, **OBV3@δ6**, **OBV3@δ11** — and runs inference with each of them on a sample.
  
+`AISystem` has no built-in threshold defaults: `static_malware_threshold` and `dynamic_threshold` must always be supplied (a missing one raises `ValueError`), and in non-baseline mode `static_goodware_threshold` is required as well. Before running the script, edit `ai_sys_inference.py` to:
+ 
+1. set `sample_path` to the PE file you want to analyze;
+2. fill in the tuned ≈1% FPR operating point for each system's `static_malware_threshold`/`dynamic_threshold` (currently left as `None` placeholders);
+3. point `XGB_NO_FILTERS`, `XGB_WITH_FILTERS`, `NEBULA_ALL_DIR`, and `NEBULA_DELTA_DIR` at your actual `data/models/...` layout.
 ```bash
-python ai_sys_inference.py <sample_path>
+python ai_sys_inference.py
 ```
  
-`<sample_path>` is the path to the PE file to analyze. The script prints the verdict from both systems.
- 
+The script prints, for each of the five systems, which level took the final decision and the resulting verdict, plus the per-stage scores for one of them.
+
 ## Running the Attacks
  
-`attack_on_tm.py` initializes each of the four threat models (TM1–TM4) with `AISystemWrapper` and runs the GAMMA and padding attacks against it; see the script for a runnable example.
+`attack_on_tm.py` initializes each of the four threat models (TM1–TM4) with `AISystemWrapper` and runs the GAMMA and padding attacks against it.
+
+## Citation
+ 
+The paper is actually under review.
