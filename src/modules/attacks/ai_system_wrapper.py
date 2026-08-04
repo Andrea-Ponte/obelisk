@@ -23,7 +23,7 @@ class AISystemWrapper:
     def __init__(
         self,
         xgb_path=None,
-        filter=False,
+        filter=False, # flag to integrate signatures into the system surrogate
         lgbm_path=None,
         threshold=None,
     ):
