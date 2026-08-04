@@ -1,38 +1,42 @@
 # OBELISK
-
-Repository for sharing code and assets used in the paper "_OBELISK: Understanding How Malware Detection AI Systems Succeed and Fail_".
-
-# Modules
-Here we describe the released assets.
-
+ 
+Code and released assets for the paper *"Windows Malware Detector as a Compound AI System: Trade-Offs in Accuracy, Efficiency, and Adversarial Robustness"* (A. Ponte, L. Demetrio, L. Oneto, B. Biggio, F. Roli).
+ 
+OBELISK is a Compound AI System for Windows malware detection: a three-level pipeline combining YARA-based signature matching, static analysis with an XGBoost model trained on EMBER features, and dynamic analysis with [Nebula](https://github.com/dtrizna/nebula). Filtering thresholds between levels let you trade detection performance for training and inference cost. The repository also includes the black-box evasion attacks (GAMMA section injection and padding) used in the paper to evaluate the system under four threat models of increasing attacker knowledge (TM1–TM4).
+ 
+## Requirements
+ 
+- Python 3.9+
+- [`secml`](https://github.com/pralab/secml) and [`secml-malware`](https://github.com/pralab/secml_malware)
+- [`ember`](https://github.com/elastic/ember) (EMBER static feature extraction)
+- `xgboost`, `lightgbm`
+- `yara-python`
+- [Nebula](https://github.com/dtrizna/nebula) (only needed for the dynamic-analysis level — see below)
+## Modules
+ 
 - ### YARA Signatures
-    The pool of YARA signatures for blocklist rules and the allowlist rule. We also provide the list of rules without false positives 
-    our training set. 
-
+    The pool of YARA signatures used for the blocklist and the allowlist rule. We also provide the subset of blocklist rules that produce no false positives on our training set — the rules actually deployed in OBELISK.
 - ### Static Module with XGBoost
-    We release the static models deployed inside OBELISK. We provide the XGBoost model files, both for model deployed 
-    in OBELISK (with_filters) and the Baseline (no_filters). 
-
+    The static models deployed inside OBELISK: `xgb_no_filters` (used in STND and OBV1, trained on the full dataset) and `xgb_with_filters` (used in OBV2 and OBV3, trained only on samples not resolved by the signature level).
 - ### Dynamic Module with Nebula
-  We release all the Nebula models trained for each value of $\delta$ used in the ablation study of OBELISK. We also provide the Baseline model, 
-  trained on all the dataset. For using is needed to install the original repository at **https://github.com/dtrizna/nebula**
-
-# Attack Interfaces
-
-We provide the attack wrappers for attacking all the surrogates described in the paper. 
-When attacking only the static module, we use the xgboost_wrappers or gbdt_transfer when attacking the module of 
-Anderson et al. (**https://arxiv.org/abs/1804.04637**) for TM1 and TM3. When attacking subsystems, we use the ai_system wrapper. It is possible to use only the ai_system wrapper
-also for models, by specifying the parameter "filtered=False" in the init of the wrapper.
-The Anderson et al. model can be found at **https://github.com/endgameinc/malware_evasion_competition/tree/master/models/ember**
-
-
-# Script to run OBELISK
-We provide a simple script to run OBELISK and Baseline inference. The script is located in the root directory, and can be run
-with the command:
+    The Nebula models trained for each value of δ used in the ablation study, plus the model trained on the full dataset (NEBULA-ALL). To use them, install the original Nebula repository: **https://github.com/dtrizna/nebula**.
+## Attack Interfaces
+ 
+Wrappers implementing the black-box evasion attacks (GAMMA section injection and padding) used to build the A1–A4 attack sets described in the paper:
+ 
+- **`gbdt_transfer.py`** (`OpenGbdt`) — attacks the open-source EMBER-based surrogate model of [Anderson et al.](https://arxiv.org/abs/1804.04637); used for A1 and A2. Model weights: **https://github.com/endgameinc/malware_evasion_competition/tree/master/models/ember**.
+- **`xgb_wrappers.py`** (`CClassifierXGBoost` / `CXGBWrapperPhi`) — attacks the static XGBoost model deployed inside OBELISK; used for A3 and A4.
+- **`ai_system_wrapper.py`** (`AISystemWrapper`) — attacks a surrogate Compound AI System; used for A2 and A4. It can also be used for A1 and A3 by initializing it with `filter=False`, which disables the signature level.
+## Running OBELISK
+ 
+`ai_sys_inference.py` runs inference on a single sample with both OBELISK (filtered pipeline) and the STND baseline:
+ 
 ```bash
 python ai_sys_inference.py <sample_path>
 ```
-where `<sample_path>` is the path to the sample to be analyzed. The script will output the result of the inference both for OBELISK and Baseline.
-
-We also provide the script (```attack_on_tm.py```) to initialize the Threat Models with the AI System Wrapper. We provide an example
-to run gamma and padding attacks. 
+ 
+`<sample_path>` is the path to the PE file to analyze. The script prints the verdict from both systems.
+ 
+## Running the Attacks
+ 
+`attack_on_tm.py` initializes each of the four threat models (TM1–TM4) with `AISystemWrapper` and runs the GAMMA and padding attacks against it; see the script for a runnable example.
