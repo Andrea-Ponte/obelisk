@@ -1,12 +1,8 @@
+from pathlib import Path
+
 from src.modules.dynamic.dynamic_module import DynamicModule
 from src.modules.signatures.yara_matching import YaraMatcher
 from src.modules.static.static_module import StaticModule
-from pathlib import Path
-
-default_nebula_threshold = 0.9999479055404664
-default_threshold = 0.03728
-baseline_xgb_threshold = 0.964414
-baseline_nebula_threshold = 0.9934418201446532
 
 baseline_xgb_model = str(
     Path(__file__).parent.parent.parent.parent / "data/models/xgb_no_filters.json"
@@ -84,33 +80,38 @@ class AISystem:
             static_goodware_threshold=None,
             dynamic_threshold=None,
     ):
-        """Load filters and models, then configure thresholds for the selected mode."""
+        """Load filters and models, then configure thresholds for the selected mode.
+
+        There are no built-in threshold defaults: static_malware_threshold and
+        dynamic_threshold must always be passed explicitly (in baseline mode
+        too), and in non-baseline mode static_goodware_threshold is required
+        as well. Missing values raise ValueError instead of silently falling
+        back to a hardcoded number.
+        """
         if baseline:
+            missing_params = []
+            if static_malware_threshold is None:
+                missing_params.append("static_malware_threshold")
+            if dynamic_threshold is None:
+                missing_params.append("dynamic_threshold")
+            if missing_params:
+                raise ValueError(
+                    "When baseline=True you must pass static_malware_threshold and "
+                    "dynamic_threshold explicitly. Missing: " + ", ".join(missing_params)
+                )
+
+            # static_goodware_threshold stays optional: the baseline (STND)
+            # system uses a single upper threshold, so None here is valid
+            # and simply skips the lower-threshold branch in predict().
             self.static_goodware_threshold = static_goodware_threshold
-            self.static_malware_threshold = (
-                baseline_xgb_threshold
-                if static_malware_threshold is None
-                else static_malware_threshold
-            )
-            self.dynamic_threshold = (
-                baseline_nebula_threshold
-                if dynamic_threshold is None
-                else dynamic_threshold
-            )
+            self.static_malware_threshold = static_malware_threshold
+            self.dynamic_threshold = dynamic_threshold
 
             selected_static_model = static_model_path or baseline_xgb_model
             selected_dynamic_model = dynamic_model_path or baseline_nebula_model
             selected_bpe_model = bpe_model_path or baseline_bpe_model
             selected_vocab = vocab_path or baseline_vocab
         else:
-            self.static_goodware_threshold = (
-                default_threshold if static_goodware_threshold is None else static_goodware_threshold
-            )
-            self.static_malware_threshold = (
-                (1 - default_threshold) if static_malware_threshold is None else static_malware_threshold
-            )
-            self.dynamic_threshold = dynamic_threshold
-
             missing_params = []
             if static_model_path is None:
                 missing_params.append("static_model_path")
@@ -120,12 +121,22 @@ class AISystem:
                 missing_params.append("bpe_model_path")
             if vocab_path is None:
                 missing_params.append("vocab_path")
+            if static_goodware_threshold is None:
+                missing_params.append("static_goodware_threshold")
+            if static_malware_threshold is None:
+                missing_params.append("static_malware_threshold")
 
             if missing_params:
                 raise ValueError(
-                    "When baseline=False you must pass all model paths in the constructor. Missing: "
-                    + ", ".join(missing_params)
+                    "When baseline=False you must pass all model paths and both static "
+                    "thresholds in the constructor. Missing: " + ", ".join(missing_params)
                 )
+
+            self.static_goodware_threshold = static_goodware_threshold
+            self.static_malware_threshold = static_malware_threshold
+            # dynamic_threshold stays optional here: predict() falls back to
+            # returning the raw dynamic score when it is left as None.
+            self.dynamic_threshold = dynamic_threshold
 
             selected_static_model = static_model_path
             selected_dynamic_model = dynamic_model_path
@@ -198,9 +209,3 @@ class AISystem:
             return scores
 
         return "dynamic", dynamic_score
-
-
-
-
-
-

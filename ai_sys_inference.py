@@ -45,15 +45,14 @@ def _nebula_paths(directory: str) -> dict:
     )
 
 
-def stnd_example(dynamic_threshold: float = None) -> AISystem:
+def stnd_example(static_malware_threshold: float, dynamic_threshold: float) -> AISystem:
     """STND: YARA + GBDT-ALL (single threshold) + NEBULA-ALL.
-
-    Uses AISystem's own baseline defaults for models and the static
-    threshold (baseline_xgb_threshold). Pass dynamic_threshold to override
-    the tuned Nebula operating point; otherwise AISystem falls back to its
-    own baseline_nebula_threshold default.
     """
-    return AISystem(baseline=True, dynamic_threshold=dynamic_threshold)
+    return AISystem(
+        baseline=True,
+        static_malware_threshold=static_malware_threshold,
+        dynamic_threshold=dynamic_threshold,
+    )
 
 
 def obv1_delta6_example(dynamic_threshold: float = None) -> AISystem:
@@ -97,10 +96,6 @@ def obv3_delta6_example(dynamic_threshold: float = None) -> AISystem:
 
 def obv3_delta11_example(dynamic_threshold: float = None) -> AISystem:
     """OBV3 @ delta_11: YARA + GBDT-YARA (two thresholds) + NEBULA-GBDT-YARA (trained for delta_11).
-
-    delta_11 (0.03728) is also AISystem's own default threshold, so the two
-    static_*_threshold arguments below are optional here — kept explicit for
-    consistency with the other configurations.
     """
     delta = DELTA_VALUES[11]
     return AISystem(
@@ -114,29 +109,26 @@ def obv3_delta11_example(dynamic_threshold: float = None) -> AISystem:
 
 
 def main():
-    # Fill in the tuned dynamic_threshold for each system once you have it
-    # (Sect. V-B: each system's last-level threshold is tuned at ~1% FPR).
+    # Fill in the tuned thresholds for each system before running this
+    # (Sect. V-B: each system's threshold is tuned at ~1% FPR).
+    # STND requires both thresholds explicitly (AISystem has no built-in
+    # default); OBV1/OBV2/OBV3 can leave dynamic_threshold=None,
+    # which makes predict() return the raw Nebula score for that branch.
     systems = {
-        "STND": stnd_example(dynamic_threshold=None),
-        "OBV1-d6": obv1_delta6_example(dynamic_threshold=None),
-        "OBV2-d6": obv2_delta6_example(dynamic_threshold=None),
-        "OBV3-d6": obv3_delta6_example(dynamic_threshold=None),
-        "OBV3-d11": obv3_delta11_example(dynamic_threshold=None),
+        "STND": stnd_example(static_malware_threshold=0.964414, dynamic_threshold=0.999991),
+        "OBV1-d6": obv1_delta6_example(dynamic_threshold=0.992648),
+        "OBV2-d6": obv2_delta6_example(dynamic_threshold=0.993269),
+        "OBV3-d6": obv3_delta6_example(dynamic_threshold=0.999967),
+        "OBV3-d11": obv3_delta11_example(dynamic_threshold=0.999963),
     }
 
-    # The sample format depends on what YaraMatcher / StaticModule / DynamicModule
-    # expect internally (e.g. path to a PE file, raw bytes, or a feature vector)
     sample_path = "path/to/sample.exe"
 
     print(f"Running inference on {sample_path} with all 5 configurations:\n")
     for name, system in systems.items():
         module_used, verdict = system.predict(sample_path)
         print(f"[{name}] deciding module: {module_used} -> verdict: {verdict}")
-        # verdict: 0 = goodware, 1 = malware, -1 = dynamic unavailable/error
-        # (if dynamic_threshold was left as None for a non-baseline system,
-        # the "dynamic" branch returns the raw Nebula score instead of 0/1)
 
-    # --- Per-stage scores for a single system (useful for analysis/debugging) ---
     print("\n[OBV3-d11] per-stage scores:")
     scores = systems["OBV3-d11"].predict_separate(sample_path)
     for i in range(0, len(scores), 2):
