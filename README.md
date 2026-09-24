@@ -49,4 +49,4 @@ The script prints, for each of the five systems, which level took the final deci
 
 ## Citation
  
-The paper is currently under review.
+The paper is currently under review. We published the [preprint](https://arxiv.org/pdf/2609.08394) on arXiv.
